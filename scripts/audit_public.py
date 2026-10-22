@@ -9,9 +9,13 @@ SKIP_DIRS = {".git", ".trash", ".obsidian", "plugins", "cache", "logs", "__pycac
 PATTERNS = [
     ("private key", re.compile(r"-----BEGIN (?:RSA |OPENSSH |EC |DSA )?PRIVATE KEY-----")),
     ("AWS access key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
+    ("GitHub token", re.compile(r"\bgh[pousr]_[A-Za-z0-9]{20,}\b")),
+    ("Google API key", re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b")),
+    ("OpenAI-style secret key", re.compile(r"\bsk-[A-Za-z0-9_-]{24,}\b")),
     ("generic credential assignment", re.compile(r"(?i)\b(?:api[_-]?key|secret|password|token)\s*[:=]\s*[\"'][^\"']{12,}[\"']")),
-    ("home-directory path", re.compile(r"/(?:home|Users)/[A-Za-z0-9_.-]+/")),
+    ("home-directory path", re.compile(r"/(?:home|Users|root)/[A-Za-z0-9_.-]+(?:/|$)")),
     ("Windows user path", re.compile(r"[A-Z]:\\Users\\[^\\\s]+", re.I)),
+    ("WSL user path", re.compile(r"/mnt/[a-z]/Users/[^/\s]+", re.I)),
 ]
 
 def main():

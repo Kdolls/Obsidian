@@ -5,7 +5,7 @@ import datetime as dt
 import json
 import re
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parent.parent
 WIKI = ROOT / "Wiki"
@@ -33,6 +33,12 @@ def frontmatter(path):
             if val:
                 if val.startswith("[") and val.endswith("]"):
                     data[key] = [v.strip().strip("\"'") for v in val[1:-1].split(",") if v.strip()]
+                elif (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
+                    data[key] = val[1:-1]
+                elif val.lower() in {"true", "false"}:
+                    data[key] = val.lower() == "true"
+                elif re.fullmatch(r"-?\d+", val):
+                    data[key] = int(val)
                 else:
                     data[key] = val.strip("\"'")
                 active_list = None
@@ -88,7 +94,8 @@ def source_rows():
         if path.name.lower() == "index.md":
             continue
         fm, _, _ = frontmatter(path)
-        out.append({"path": rel(path), "title": fm.get("Title", path.stem), "processed": fm.get("Processed") is True or str(fm.get("Processed", "")).lower() == "true", "covered_by": [], "updated": dt.date.today().isoformat()})
+        processed = fm.get("Processed") is True or str(fm.get("Processed", "")).lower() == "true"
+        out.append({"path": rel(path), "title": fm.get("Title", path.stem), "processed": processed, "covered_by": [], "updated": fm.get("updated", "")})
     return out
 
 def manifest_rows():
@@ -108,17 +115,48 @@ def coverage_map():
             if source in mapping: mapping[source].append(rel(note))
     return mapping
 
+def valid_source_path(source):
+    if not isinstance(source, str):
+        return False
+    relative = PurePosixPath(source)
+    if relative.is_absolute() or ".." in relative.parts or not source.startswith("Raw/Sources/"):
+        return False
+    try:
+        resolved = (ROOT / Path(*relative.parts)).resolve(strict=True)
+        resolved.relative_to(SOURCE_DIR.resolve(strict=True))
+        return resolved.is_file()
+    except (OSError, ValueError):
+        return False
+
+def valid_date(value):
+    if not isinstance(value, str):
+        return False
+    try:
+        dt.date.fromisoformat(value)
+        return True
+    except ValueError:
+        return False
+
 def lint():
     errors = []
+    required = ("tags", "topics", "status", "created", "updated", "sources", "source_count", "aliases")
     for path in notes():
         fm, _, err = frontmatter(path)
         if err: errors.append(f"{rel(path)}: {err}"); continue
+        for key in required:
+            if key not in fm:
+                errors.append(f"{rel(path)}: missing {key}")
         tags, sources = fm.get("tags"), fm.get("sources")
         if not isinstance(tags, list) or len(tags) != 1 or tags[0] not in ALLOWED: errors.append(f"{rel(path)}: tags must contain exactly one allowed Wiki type")
+        if not isinstance(fm.get("topics"), list): errors.append(f"{rel(path)}: topics must be a list")
+        if not isinstance(fm.get("status"), str) or not fm.get("status", "").strip(): errors.append(f"{rel(path)}: status must be a non-empty string")
+        if not valid_date(fm.get("created")): errors.append(f"{rel(path)}: created must use YYYY-MM-DD")
+        if not valid_date(fm.get("updated")): errors.append(f"{rel(path)}: updated must use YYYY-MM-DD")
+        if not isinstance(fm.get("aliases"), list): errors.append(f"{rel(path)}: aliases must be a list")
         if not isinstance(sources, list) or not sources: errors.append(f"{rel(path)}: sources must contain at least one Raw source path")
         else:
             for source in sources:
-                if not isinstance(source, str) or not source.startswith("Raw/Sources/") or not (ROOT / source).is_file(): errors.append(f"{rel(path)}: invalid or missing source link {source!r}")
+                if not valid_source_path(source): errors.append(f"{rel(path)}: invalid or missing source link {source!r}")
         try: count = int(fm.get("source_count", -1))
         except (TypeError, ValueError): count = -1
         if count != len(sources) if isinstance(sources, list) else True: errors.append(f"{rel(path)}: source_count does not match sources")
@@ -133,7 +171,12 @@ def source_lint():
         if err: errors.append(f"{rel(path)}: {err}"); continue
         for key in ("Title", "Reference", "Created", "Processed", "tags"):
             if key not in fm: errors.append(f"{rel(path)}: missing {key}")
-        processed = fm.get("Processed") is True or str(fm.get("Processed", "")).lower() == "true"
+        if not isinstance(fm.get("Title"), str) or not fm.get("Title", "").strip(): errors.append(f"{rel(path)}: Title must be a non-empty string")
+        if not isinstance(fm.get("Reference"), str) or not fm.get("Reference", "").strip(): errors.append(f"{rel(path)}: Reference must be a non-empty string")
+        if not valid_date(fm.get("Created")): errors.append(f"{rel(path)}: Created must use YYYY-MM-DD")
+        if not isinstance(fm.get("Processed"), bool): errors.append(f"{rel(path)}: Processed must be true or false")
+        if not isinstance(fm.get("tags"), list) or not fm.get("tags"): errors.append(f"{rel(path)}: tags must be a non-empty list")
+        processed = fm.get("Processed") is True
         if processed and not mapping.get(rel(path)): errors.append(f"{rel(path)}: marked processed but has no Wiki coverage")
     return errors
 
@@ -144,6 +187,34 @@ def cmd_doctor():
     print(f"Compiled notes: {len(notes())}; Raw sources: {len(source_rows())}")
     print(f"Catalog: {'present' if (WIKI / 'catalog.jsonl').exists() else 'missing'}; source manifest: {'present' if MANIFEST.exists() else 'missing'}")
     if missing: print("Missing folders: " + ", ".join(missing)); return 1
+    if sys.version_info < (3, 8): print("Python 3.8 or newer is required.", file=sys.stderr); return 1
+    data_errors = []
+    expected = {
+        WIKI / "catalog.jsonl": ({"path", "title", "tag", "topics", "sources", "updated"}, {row["path"] for row in entries()}),
+        MANIFEST: ({"path", "title", "processed", "covered_by", "updated"}, {row["path"] for row in source_rows()}),
+    }
+    for path, (required_keys, expected_paths) in expected.items():
+        if not path.exists():
+            continue
+        rows = []
+        for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                data_errors.append(f"{rel(path)}:{line_number}: invalid JSON")
+                continue
+            if not isinstance(row, dict) or not required_keys.issubset(row):
+                data_errors.append(f"{rel(path)}:{line_number}: missing required fields")
+                continue
+            rows.append(row)
+        actual_paths = {row["path"] for row in rows}
+        if actual_paths != expected_paths or len(rows) != len(expected_paths):
+            data_errors.append(f"{rel(path)}: entries do not match current notes or sources")
+        print(f"{rel(path)} entries: {len(rows)}")
+    for error in data_errors:
+        print(error, file=sys.stderr)
+    if data_errors:
+        return 1
     return 0
 
 def main():
@@ -164,6 +235,9 @@ def main():
             row["covered_by"] = sorted(mapping.get(row["path"], []))
             if row["covered_by"] and args.accept_covered: row["processed"] = True
             elif row["path"] in old and not args.accept_covered: row["processed"] = old[row["path"]].get("processed", row["processed"])
+            previous = old.get(row["path"])
+            unchanged = previous and all(previous.get(key) == row.get(key) for key in ("title", "processed", "covered_by"))
+            row["updated"] = previous.get("updated", "") if unchanged else dt.date.today().isoformat()
         if args.update: write_jsonl(MANIFEST, current)
         print("\n".join(json.dumps(r, sort_keys=True) for r in current) or "No Raw sources found."); return 0
     elif args.command == "source-delta":
