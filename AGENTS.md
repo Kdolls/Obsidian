@@ -2,6 +2,7 @@
 
 - Treat `Raw/Sources/` as source material, not compiled notes. Preserve its meaning and do not silently rewrite evidence.
 - Write reusable knowledge only under `Wiki/`.
+- Treat `Schema/` as the canonical reference for frontmatter, naming, workflows, and lint rules. Follow it when editing Raw or Wiki notes, and update it when those rules change.
 - Keep every compiled note linked to one or more existing files in `Raw/Sources/` using the `sources` frontmatter field.
 - Search `Wiki/catalog.jsonl` before opening broad Raw context. Read the most relevant compiled notes first.
 - Do not invent citations or make claims unsupported by cited sources. Keep source wording and your synthesis distinguishable.

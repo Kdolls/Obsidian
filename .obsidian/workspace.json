@@ -11,10 +11,14 @@
             "id": "cbf645d13c4a34df",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
+              "type": "markdown",
+              "state": {
+                "file": "_templates/topic-note.md",
+                "mode": "source",
+                "source": false
+              },
               "icon": "lucide-file",
-              "title": "New tab"
+              "title": "topic-note"
             }
           }
         ]
@@ -184,9 +188,31 @@
       "bases:Create new base": false
     }
   },
-  "active": "bcabc9c37fdcb9a0",
+  "active": "cbf645d13c4a34df",
   "lastOpenFiles": [
-    "Pasted image 20261022185736.png",
-    "Welcome.md"
+    "_templates/source-note.md",
+    "_templates/project-note.md",
+    "_templates/log-note.md",
+    "_templates/entity-note.md",
+    "_templates/concept-note.md",
+    "AGENTS.md",
+    "Welcome.md",
+    "Wiki/index.md",
+    "Wiki/Logs/first-ingest.md",
+    "Wiki/Logs/index.md",
+    "Wiki/Concepts/obsidian-agent-skills.md",
+    "Wiki/Concepts/index.md",
+    "Wiki/Concepts/compiled-knowledge-note.md",
+    "Schema/naming-conventions.md",
+    "Schema/workflow-examples.md",
+    "Schema/lint-checklist.md",
+    "Schema/frontmatter-schema.md",
+    "Schema/command-reference.md",
+    "Wiki/Entities/index.md",
+    "_templates/topic-note.md",
+    "Raw/Sources/kepano-obsidian-skills.md",
+    "Wiki/Topics/wiki-maintenance.md",
+    "Wiki/Topics/index.md",
+    "Pasted image 20261022185736.png"
   ]
 }
