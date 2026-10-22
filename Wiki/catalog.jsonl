@@ -1,0 +1,4 @@
+{"path": "Wiki/Topics/wiki-maintenance.md", "sources": ["Raw/Sources/wanderloots-llm-wiki-core-setup-guide.md"], "tag": "topic", "title": "Wiki maintenance", "topics": ["LLM Wiki"], "updated": "2026-10-22"}
+{"path": "Wiki/Concepts/compiled-knowledge-note.md", "sources": ["Raw/Sources/wanderloots-llm-wiki-core-setup-guide.md"], "tag": "concept", "title": "Compiled knowledge note", "topics": ["LLM Wiki"], "updated": "2026-10-22"}
+{"path": "Wiki/Concepts/obsidian-agent-skills.md", "sources": ["Raw/Sources/kepano-obsidian-skills.md"], "tag": "concept", "title": "Obsidian agent skills", "topics": ["Obsidian", "Agent Skills"], "updated": "2026-10-22"}
+{"path": "Wiki/Projects/llm-wiki-core.md", "sources": ["Raw/Sources/wanderloots-llm-wiki-core-setup-guide.md"], "tag": "project", "title": "LLM Wiki Core", "topics": ["LLM Wiki"], "updated": "2026-10-22"}
